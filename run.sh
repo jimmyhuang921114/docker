@@ -1,52 +1,53 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
+#找尋剛剛建立好的Image
 IMAGE_NAME="my-ros2:dev"
 
-# Colors
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
-
-LEVELS_UP=${LEVELS_UP:-1}
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MOUNT_DIR="$SCRIPT_DIR"
-for _ in $(seq 1 "${LEVELS_UP}"); do
-  MOUNT_DIR="$(dirname "$MOUNT_DIR")"
-done
-
-echo -e "${YELLOW}Mounting host dir: ${MOUNT_DIR}${NC}"
-
-GPU_FLAG=""
+# 允許 Docker 使用 X11 顯示 GUI（例如 RViz2）
+xhost +local:docker
 
 
+YELLOW='\033[1;33m'
+NC='\033[0m'
+# 顯示狀態
+echo -e "${YELLOW}===== 進入 Docker 容器 =====${NC}"
+
+# ---工作目錄以 "主機目錄為主"
+# 找到主機目錄位置
+HOST_DIR="$(pwd)"
 
 
-# X11
-: "${DISPLAY:=${DISPLAY:-:0}}"
-XAUTH_HOST="${XAUTHORITY:-$HOME/.Xauthority}"
-if [[ ! -f "$XAUTH_HOST" ]]; then
-  echo -e "${YELLOW}Warn:${NC} $XAUTH_HOST 不存在"
-fi
-
-
-
-echo -e "${YELLOW}Running Docker container from image '$IMAGE_NAME'...${NC}"
+# 啟動並直接進入 Docker
 docker run -it --rm \
-  --net=host --ipc=host --privileged \
-  -e DISPLAY="$DISPLAY" \
-  -e QT_X11_NO_MITSHM=1 \
-  -e XAUTHORITY="$XAUTH_HOST" \
+  --net=host \
+  --privileged \
+  -e DISPLAY=$DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v "$XAUTH_HOST":"$XAUTH_HOST":ro \
   -v /dev:/dev \
-  -v "${MOUNT_DIR}":/workspace \
-  -w /workspace \
-  $GPU_FLAG \
-  "$IMAGE_NAME"
+  -v "$HOST_DIR":"$HOST_DIR" \
+  -w "$HOST_DIR" \
+  "$IMAGE_NAME" \
+  bash
 
-rc=$?
-if [ $rc -eq 0 ]; then
-  echo -e "${GREEN}Success:${NC} Docker container exited successfully."
-else
-  echo -e "${RED}Error:${NC} Docker container failed to run. (exit $rc)"
-  exit $rc
-fi
+
+
+
+# ----工作目錄以 "工作區域為主" ----#
+
+# 取得目前腳本上一層目錄
+# SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# MOUNT_DIR="$(dirname "$SCRIPT_DIR")"
+
+
+
+# 進入工作區塊
+# docker run -it --rm \
+  # --net=host \
+  # --privileged \
+  # -e DISPLAY=$DISPLAY \
+  # -v /tmp/.X11-unix:/tmp/.X11-unix \
+  # -v /dev:/dev \
+  # -v "$MOUNT_DIR":/workspace \
+  # -w /workspace \
+  # "$IMAGE_NAME" \
+  # bash
