@@ -28,6 +28,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-locale LANG=en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
+# Python 套件
+RUN pip3 install --no-cache-dir \
+      numpy \
+      scipy \
+      matplotlib \
+      pillow \
+      pyyaml \
+      pandas \
+      tqdm
+
 
 # YOLO
 RUN pip3 install ultralytics
